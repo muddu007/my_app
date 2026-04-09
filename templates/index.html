@@ -1,0 +1,1378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gateway Console</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0c0f;
+        --surface: #111318;
+        --surface2: #181c22;
+        --border: #252a34;
+        --border2: #2e3542;
+
+        --amber: #f5a623;
+        --amber-dim: #7a5010;
+        --amber-lo: #1e1508;
+
+        --green: #4ade80;
+        --green-dim: #166534;
+        --green-lo: #071a0e;
+
+        --red: #f87171;
+        --red-dim: #7f1d1d;
+        --red-lo: #1c0808;
+
+        --cyan: #38bdf8;
+        --cyan-dim: #0c4a6e;
+        --cyan-lo: #041520;
+
+        --purple: #a78bfa;
+        --purple-dim: #4c1d95;
+        --purple-lo: #130a2a;
+
+        --text-hi: #f0ece0;
+        --text: #c8c2a8;
+        --text-dim: #7a7362;
+        --text-lo: #3d3930;
+
+        --mono: "JetBrains Mono", monospace;
+        --sans: "Space Grotesk", sans-serif;
+
+        --radius: 6px;
+        --radius-sm: 3px;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      ::selection {
+        background: var(--amber);
+        color: #000;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.6;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          rgba(0, 0, 0, 0.07) 3px,
+          rgba(0, 0, 0, 0.07) 4px
+        );
+        pointer-events: none;
+      }
+
+      .shell {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-height: 100vh;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 0 1.5rem 2.5rem;
+      }
+
+      /* ─── HEADER ─── */
+      header {
+        padding: 1.5rem 0 1.25rem;
+        margin-bottom: 1.75rem;
+        border-bottom: 1px solid var(--border2);
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .brand-eyebrow {
+        font-family: var(--mono);
+        font-size: 0.62rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--amber-dim);
+        margin-bottom: 0.3rem;
+      }
+      .brand-title {
+        font-family: var(--sans);
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--amber);
+        text-shadow: 0 0 20px rgba(245, 166, 35, 0.4);
+        line-height: 1;
+      }
+      .header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.4rem;
+      }
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+      }
+      .led {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green);
+        animation: ledpulse 2.5s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      .led.busy {
+        background: var(--cyan);
+        box-shadow: 0 0 6px var(--cyan);
+        animation: ledflicker 0.3s steps(1) infinite;
+      }
+      .led.err {
+        background: var(--red);
+        box-shadow: 0 0 6px var(--red);
+        animation: ledpulse 0.8s ease-in-out infinite;
+      }
+      @keyframes ledpulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+      @keyframes ledflicker {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.2;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .status-label {
+        font-family: var(--sans);
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-hi);
+      }
+      .gateway-url {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-dim);
+      }
+      .gateway-url span {
+        color: var(--amber-dim);
+        margin-right: 0.4rem;
+      }
+
+      /* Private IP badge in header */
+      .private-ip-row {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+      }
+      .private-ip-row .pip-label {
+        color: var(--cyan-dim);
+        letter-spacing: 0.08em;
+      }
+      .private-ip-row .pip-val {
+        color: var(--cyan);
+        letter-spacing: 0.06em;
+      }
+
+      /* ─── GRID ─── */
+      .grid {
+        display: grid;
+        grid-template-columns: 310px 1fr;
+        gap: 1.25rem;
+        align-items: start;
+      }
+
+      /* ─── PANEL ─── */
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        overflow: hidden;
+        position: relative;
+      }
+      .panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          var(--amber) 0%,
+          rgba(245, 166, 35, 0.1) 100%
+        );
+      }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.7rem 1rem;
+        border-bottom: 1px solid var(--border2);
+        background: rgba(0, 0, 0, 0.4);
+      }
+      .panel-title {
+        font-family: var(--sans);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--amber);
+      }
+      .panel-tag {
+        font-size: 0.6rem;
+        color: var(--text-dim);
+        letter-spacing: 0.08em;
+        font-family: var(--mono);
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0.15rem 0.45rem;
+      }
+
+      /* ─── COUNTER ─── */
+      .counter-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1rem 1.5rem;
+        gap: 0.4rem;
+        border-bottom: 1px solid var(--border2);
+        background: var(--surface2);
+      }
+      .counter-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--text);
+      }
+      .counter-value {
+        font-family: var(--sans);
+        font-size: 6rem;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--amber);
+        text-shadow: 0 0 30px rgba(245, 166, 35, 0.5);
+        transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+        letter-spacing: -0.02em;
+        min-width: 3ch;
+        text-align: center;
+      }
+      .counter-value.bump {
+        transform: scale(1.12);
+      }
+      .counter-meta {
+        font-size: 0.65rem;
+        color: var(--text);
+        letter-spacing: 0.08em;
+      }
+
+      /* ─── MEM GAUGE ─── */
+      .mem-section {
+        padding: 0.85rem 1rem 0.8rem;
+        border-bottom: 1px solid var(--border2);
+        background: var(--surface2);
+      }
+      .mem-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.55rem;
+      }
+      .mem-label {
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        color: var(--text-dim);
+      }
+      .mem-nums {
+        font-size: 0.65rem;
+        letter-spacing: 0.05em;
+      }
+      .mem-pct-val {
+        font-weight: 700;
+      }
+
+      /* Arc/bar gauge */
+      .mem-gauge-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .mem-arc-svg {
+        width: 130px;
+        height: 72px;
+        overflow: visible;
+      }
+
+      /* Segmented bar beneath arc */
+      .mem-bar-row {
+        display: flex;
+        gap: 3px;
+        width: 100%;
+      }
+      .mem-seg {
+        flex: 1;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--border2);
+        transition:
+          background 0.3s,
+          box-shadow 0.3s;
+      }
+      .mem-seg.active-low {
+        background: var(--green);
+        box-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+      }
+      .mem-seg.active-mid {
+        background: var(--amber);
+        box-shadow: 0 0 5px rgba(245, 166, 35, 0.5);
+      }
+      .mem-seg.active-high {
+        background: var(--red);
+        box-shadow: 0 0 5px rgba(248, 113, 113, 0.5);
+      }
+
+      .mem-detail {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        font-size: 0.6rem;
+        color: var(--text-dim);
+        letter-spacing: 0.05em;
+        margin-top: 0.2rem;
+      }
+      .mem-detail .highlight {
+        color: var(--text);
+      }
+
+      /* ─── ACTIONS ─── */
+      .actions {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+      }
+
+      .cmd-btn {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        border: 1px solid;
+        border-radius: var(--radius-sm);
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        background: transparent;
+        transition:
+          background 0.15s,
+          box-shadow 0.15s,
+          transform 0.08s,
+          border-color 0.15s;
+        position: relative;
+        overflow: hidden;
+      }
+      .cmd-btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: currentColor;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .cmd-btn:hover::before {
+        opacity: 0.08;
+      }
+      .cmd-btn:active {
+        transform: scale(0.985);
+      }
+      .cmd-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .cmd-btn.add {
+        color: var(--green);
+        border-color: var(--green-dim);
+      }
+      .cmd-btn.add:hover:not(:disabled) {
+        border-color: var(--green);
+        box-shadow:
+          0 0 14px rgba(74, 222, 128, 0.2),
+          inset 0 0 10px rgba(74, 222, 128, 0.05);
+      }
+      .cmd-btn.del {
+        color: var(--red);
+        border-color: var(--red-dim);
+      }
+      .cmd-btn.del:hover:not(:disabled) {
+        border-color: var(--red);
+        box-shadow:
+          0 0 14px rgba(248, 113, 113, 0.2),
+          inset 0 0 10px rgba(248, 113, 113, 0.05);
+      }
+      .cmd-btn.get {
+        color: var(--cyan);
+        border-color: var(--cyan-dim);
+      }
+      .cmd-btn.get:hover:not(:disabled) {
+        border-color: var(--cyan);
+        box-shadow:
+          0 0 14px rgba(56, 189, 248, 0.2),
+          inset 0 0 10px rgba(56, 189, 248, 0.05);
+      }
+      .cmd-btn.spike {
+        color: var(--purple);
+        border-color: var(--purple-dim);
+      }
+      .cmd-btn.spike:hover:not(:disabled) {
+        border-color: var(--purple);
+        box-shadow:
+          0 0 14px rgba(167, 139, 250, 0.2),
+          inset 0 0 10px rgba(167, 139, 250, 0.05);
+      }
+      .cmd-btn.spike.spike-active {
+        color: var(--red);
+        border-color: var(--red-dim);
+      }
+      .cmd-btn.spike.spike-active:hover:not(:disabled) {
+        border-color: var(--red);
+        box-shadow: 0 0 14px rgba(248, 113, 113, 0.2);
+      }
+
+      .btn-left {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+      }
+      .btn-sigil {
+        font-size: 1.1rem;
+        line-height: 1;
+        min-width: 14px;
+      }
+      .btn-label {
+        font-weight: 600;
+        font-size: 0.82rem;
+        color: inherit;
+      }
+      .btn-route {
+        font-size: 0.65rem;
+        opacity: 0.5;
+        letter-spacing: 0.04em;
+        margin-left: 0.3rem;
+      }
+      .btn-right {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .btn-method {
+        font-size: 0.6rem;
+        letter-spacing: 0.14em;
+        border: 1px solid currentColor;
+        border-radius: 2px;
+        padding: 0.12rem 0.35rem;
+        opacity: 0.65;
+      }
+
+      .spinner {
+        width: 13px;
+        height: 13px;
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: spin 0.5s linear infinite;
+        display: none;
+        flex-shrink: 0;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .loading .spinner {
+        display: block;
+      }
+      .loading .btn-sigil {
+        visibility: hidden;
+        position: absolute;
+      }
+
+      .info-strip {
+        margin: 0 1rem 1rem;
+        padding: 0.65rem 0.9rem;
+        border: 1px solid var(--border2);
+        border-left: 3px solid var(--amber-dim);
+        border-radius: var(--radius-sm);
+        background: var(--amber-lo);
+        font-size: 0.68rem;
+        color: var(--text);
+        line-height: 1.75;
+        letter-spacing: 0.03em;
+      }
+
+      /* ─── LOG ─── */
+      .log-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .btn-clear {
+        font-family: var(--mono);
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        background: none;
+        border: 1px solid var(--border2);
+        border-radius: var(--radius-sm);
+        padding: 0.22rem 0.55rem;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .btn-clear:hover {
+        color: var(--amber);
+        border-color: var(--amber-dim);
+      }
+
+      #log-body {
+        height: 430px;
+        overflow-y: auto;
+        padding: 0.6rem 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        background: var(--surface);
+      }
+      #log-body::-webkit-scrollbar {
+        width: 4px;
+      }
+      #log-body::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #log-body::-webkit-scrollbar-thumb {
+        background: var(--border2);
+        border-radius: 2px;
+      }
+      #log-body::-webkit-scrollbar-thumb:hover {
+        background: var(--amber-dim);
+      }
+
+      .log-entry {
+        display: grid;
+        grid-template-columns: 74px 54px 1fr;
+        gap: 0.6rem;
+        padding: 0.4rem 0.6rem;
+        border-radius: var(--radius-sm);
+        animation: logslide 0.18s ease;
+        border-left: 2px solid transparent;
+        align-items: baseline;
+      }
+      @keyframes logslide {
+        from {
+          opacity: 0;
+          transform: translateX(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      .log-entry.pending {
+        border-color: var(--amber-dim);
+        background: rgba(245, 166, 35, 0.06);
+      }
+      .log-entry.success {
+        border-color: var(--green-dim);
+        background: rgba(74, 222, 128, 0.06);
+      }
+      .log-entry.error {
+        border-color: var(--red-dim);
+        background: rgba(248, 113, 113, 0.06);
+      }
+      .log-entry.info {
+        border-color: var(--cyan-dim);
+        background: rgba(56, 189, 248, 0.06);
+      }
+
+      .log-ts {
+        color: var(--text-dim);
+        font-size: 0.72rem;
+      }
+      .log-verb {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+      .log-verb.GET {
+        color: var(--cyan);
+      }
+      .log-verb.PUT {
+        color: var(--amber);
+      }
+      .log-verb.POST {
+        color: var(--purple);
+      }
+      .log-verb.SYS {
+        color: var(--green);
+      }
+
+      .log-msg {
+        font-size: 0.78rem;
+        color: var(--text-hi);
+        word-break: break-all;
+        line-height: 1.5;
+      }
+      .log-msg .hi-ok {
+        color: var(--green);
+        font-weight: 600;
+      }
+      .log-msg .hi-err {
+        color: var(--red);
+        font-weight: 600;
+      }
+      .log-msg .hi-dim {
+        color: var(--text-dim);
+      }
+      .log-msg .hi-num {
+        color: var(--amber);
+        font-weight: 600;
+      }
+
+      .log-empty {
+        text-align: center;
+        padding: 3.5rem 1rem;
+        color: var(--text-dim);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .log-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.55rem 0.85rem;
+        border-top: 1px solid var(--border2);
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .log-count {
+        font-size: 0.66rem;
+        color: var(--text);
+        letter-spacing: 0.1em;
+      }
+      .log-blink {
+        width: 6px;
+        height: 13px;
+        background: var(--amber);
+        box-shadow: 0 0 8px var(--amber);
+        animation: blink 0.9s steps(1) infinite;
+      }
+      @keyframes blink {
+        0%,
+        49% {
+          opacity: 1;
+        }
+        50%,
+        100% {
+          opacity: 0;
+        }
+      }
+
+      /* ─── TOAST ─── */
+      #toast-wrap {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        pointer-events: none;
+      }
+      .toast-item {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        background: var(--surface2);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        padding: 0.65rem 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-width: 210px;
+        pointer-events: auto;
+        animation: toastin 0.2s ease;
+        color: var(--text-hi);
+      }
+      .toast-item.success {
+        border-left: 3px solid var(--green);
+      }
+      .toast-item.success .toast-icon {
+        color: var(--green);
+      }
+      .toast-item.error {
+        border-left: 3px solid var(--red);
+      }
+      .toast-item.error .toast-icon {
+        color: var(--red);
+      }
+      .toast-item.info {
+        border-left: 3px solid var(--cyan);
+      }
+      .toast-item.info .toast-icon {
+        color: var(--cyan);
+      }
+      .toast-item.warning {
+        border-left: 3px solid var(--purple);
+      }
+      .toast-item.warning .toast-icon {
+        color: var(--purple);
+      }
+      @keyframes toastin {
+        from {
+          opacity: 0;
+          transform: translateX(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @media (max-width: 780px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .brand-title {
+          font-size: 1.25rem;
+        }
+        #log-body {
+          height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div>
+          <div class="brand-eyebrow">&#x25A0; System Interface v2.4</div>
+          <div class="brand-title">Gateway Console</div>
+        </div>
+        <div class="header-right">
+          <div class="status-row">
+            <div class="led" id="sys-led"></div>
+            <span class="status-label" id="sys-status">ONLINE</span>
+          </div>
+          <!-- Private IP — populated via /api/sysinfo -->
+          <div class="private-ip-row">
+            <span class="pip-label">PRIVATE&nbsp;IP</span>
+            <span class="pip-val" id="private-ip">—</span>
+          </div>
+          <div class="gateway-url"><span>ENDPOINT</span>{{ gateway_url }}</div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- Left column -->
+        <div>
+          <div class="panel" style="margin-bottom: 1.25rem">
+            <div class="panel-header">
+              <span class="panel-title">Click Register</span>
+              <span class="panel-tag">REG::CLICKS</span>
+            </div>
+
+            <div class="counter-wrap">
+              <span class="counter-label">&#x25CF;&nbsp; Total Count</span>
+              <div class="counter-value" id="click-count">&#x2014;</div>
+              <span class="counter-meta" id="last-updated">AWAITING SYNC</span>
+            </div>
+
+            <!-- MEM USED gauge (replaces LOAD ticks) -->
+            <div class="mem-section">
+              <div class="mem-header">
+                <span class="mem-label">MEM USED</span>
+                <span class="mem-nums">
+                  <span class="mem-pct-val" id="mem-pct-label">—</span>
+                  <span style="color: var(--text-dim)">%&nbsp;·&nbsp;</span>
+                  <span id="mem-mb-label" style="color: var(--text-dim)"
+                    >— / — MB</span
+                  >
+                </span>
+              </div>
+
+              <div class="mem-gauge-wrap">
+                <!-- SVG half-arc gauge -->
+                <svg
+                  class="mem-arc-svg"
+                  viewBox="0 0 130 72"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient
+                      id="arcGrad"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
+                      <stop offset="0%" stop-color="#4ade80" />
+                      <stop offset="55%" stop-color="#f5a623" />
+                      <stop offset="100%" stop-color="#f87171" />
+                    </linearGradient>
+                  </defs>
+                  <!-- track -->
+                  <path
+                    d="M 10 65 A 55 55 0 0 1 120 65"
+                    fill="none"
+                    stroke="#2e3542"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                  />
+                  <!-- fill — dasharray trick: circumference of half-arc ≈ 172.8 -->
+                  <path
+                    id="arc-fill"
+                    d="M 10 65 A 55 55 0 0 1 120 65"
+                    fill="none"
+                    stroke="url(#arcGrad)"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="172.8"
+                    stroke-dashoffset="172.8"
+                    style="transition: stroke-dashoffset 0.6s ease"
+                  />
+                  <!-- needle -->
+                  <line
+                    id="arc-needle"
+                    x1="65"
+                    y1="65"
+                    x2="65"
+                    y2="18"
+                    stroke="#f0ece0"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    style="
+                      transform-origin: 65px 65px;
+                      transform: rotate(0deg);
+                      transition: transform 0.6s ease;
+                    "
+                  />
+                  <circle cx="65" cy="65" r="4" fill="#f0ece0" />
+                  <!-- scale ticks -->
+                  <text
+                    x="8"
+                    y="72"
+                    fill="#7a7362"
+                    font-size="7"
+                    font-family="JetBrains Mono,monospace"
+                  >
+                    0
+                  </text>
+                  <text
+                    x="112"
+                    y="72"
+                    fill="#7a7362"
+                    font-size="7"
+                    font-family="JetBrains Mono,monospace"
+                  >
+                    100
+                  </text>
+                  <!-- centre readout -->
+                  <text
+                    id="arc-centre"
+                    x="65"
+                    y="58"
+                    fill="#f5a623"
+                    font-size="14"
+                    font-family="Space Grotesk,sans-serif"
+                    font-weight="700"
+                    text-anchor="middle"
+                  >
+                    —%
+                  </text>
+                </svg>
+
+                <!-- Segmented bar -->
+                <div class="mem-bar-row" id="mem-bar"></div>
+
+                <!-- Detail line -->
+                <div class="mem-detail">
+                  <span
+                    >PROC&nbsp;<span class="highlight" id="mem-proc-mb">—</span
+                    >&nbsp;MB</span
+                  >
+                  <span
+                    >HOST&nbsp;<span class="highlight" id="mem-host-total"
+                      >—</span
+                    >&nbsp;MB&nbsp;total</span
+                  >
+                </div>
+              </div>
+            </div>
+            <!-- end MEM USED -->
+
+            <div class="actions">
+              <button class="cmd-btn add" id="btn-add" onclick="doAdd()">
+                <span class="btn-left">
+                  <span class="btn-sigil">+</span>
+                  <span class="spinner"></span>
+                  <span
+                    ><span class="btn-label">ADD CLICK</span
+                    ><span class="btn-route">/add</span></span
+                  >
+                </span>
+                <span class="btn-right"
+                  ><span class="btn-method">PUT</span></span
+                >
+              </button>
+
+              <button class="cmd-btn del" id="btn-del" onclick="doDel()">
+                <span class="btn-left">
+                  <span class="btn-sigil">&#x2212;</span>
+                  <span class="spinner"></span>
+                  <span
+                    ><span class="btn-label">DEL CLICK</span
+                    ><span class="btn-route">/del</span></span
+                  >
+                </span>
+                <span class="btn-right"
+                  ><span class="btn-method">PUT</span></span
+                >
+              </button>
+
+              <button class="cmd-btn get" id="btn-get" onclick="doGet()">
+                <span class="btn-left">
+                  <span class="btn-sigil">&#x21BB;</span>
+                  <span class="spinner"></span>
+                  <span
+                    ><span class="btn-label">FETCH COUNT</span
+                    ><span class="btn-route">/get</span></span
+                  >
+                </span>
+                <span class="btn-right"
+                  ><span class="btn-method">GET</span></span
+                >
+              </button>
+
+              <button class="cmd-btn spike" id="btn-spike" onclick="doSpike()">
+                <span class="btn-left">
+                  <span class="btn-sigil" id="spike-sigil">&#x26A1;</span>
+                  <span class="spinner"></span>
+                  <span>
+                    <span class="btn-label" id="spike-label">SPIKE MEM </span>
+                    <span class="btn-route">/mem/spike</span>
+                  </span>
+                </span>
+                <span class="btn-right"
+                  ><span class="btn-method">POST</span></span
+                >
+              </button>
+            </div>
+
+            <div class="info-strip">
+              &#x25B6;&nbsp; Requests are async &mdash; multiple in-flight
+              calls<br />are independently tracked. Gateway delay ~3s.<br />
+              &#x26A1;&nbsp; Spike allocates ~30% of host RAM; click again to
+              release.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Log -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">&#x25A0;&nbsp; Request Log</span>
+            <div class="log-controls">
+              <span class="panel-tag" id="log-entry-count">0 ENTRIES</span>
+              <button class="btn-clear" onclick="clearLog()">CLR</button>
+            </div>
+          </div>
+          <div id="log-body">
+            <div class="log-empty" id="log-placeholder">
+              &#x25A1;&nbsp;&nbsp;NO ENTRIES &mdash; AWAITING INPUT
+            </div>
+          </div>
+          <div class="log-footer">
+            <span class="log-count" id="log-footer-ts">&#x2014;</span>
+            <div class="log-blink"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-wrap"></div>
+
+    <script>
+      // ── Build segmented memory bar ──────────────────────────────────────────
+      const MEM_SEGS = 20;
+      const memBarEl = document.getElementById("mem-bar");
+      for (let i = 0; i < MEM_SEGS; i++) {
+        const d = document.createElement("div");
+        d.className = "mem-seg";
+        d.id = `mseg-${i}`;
+        memBarEl.appendChild(d);
+      }
+
+      function updateMemGauge(pct) {
+        if (pct == null) return;
+        const clamped = Math.min(Math.max(pct, 0), 100);
+
+        // Arc fill — half-arc circumference ≈ 172.8px
+        const arcLen = 172.8;
+        const offset = arcLen - (clamped / 100) * arcLen;
+        document.getElementById("arc-fill").style.strokeDashoffset = offset;
+
+        // Needle — maps 0%→-90deg, 100%→+90deg
+        const angle = -90 + (clamped / 100) * 180;
+        document.getElementById("arc-needle").style.transform =
+          `rotate(${angle}deg)`;
+
+        // Centre text
+        document.getElementById("arc-centre").textContent =
+          Math.round(clamped) + "%";
+
+        // Labels
+        document.getElementById("mem-pct-label").textContent =
+          Math.round(clamped);
+
+        // Segmented bar
+        const activeSegs = Math.round((clamped / 100) * MEM_SEGS);
+        for (let i = 0; i < MEM_SEGS; i++) {
+          const seg = document.getElementById(`mseg-${i}`);
+          seg.className = "mem-seg";
+          if (i < activeSegs) {
+            const ratio = i / MEM_SEGS;
+            if (ratio < 0.5) seg.classList.add("active-low");
+            else if (ratio < 0.75) seg.classList.add("active-mid");
+            else seg.classList.add("active-high");
+          }
+        }
+      }
+
+      // ── Sysinfo poll ────────────────────────────────────────────────────────
+      let spikeActive = false;
+
+      async function fetchSysinfo(silent = false) {
+        try {
+          const res = await fetch("/api/sysinfo");
+          const json = await res.json();
+          const mem = json.mem;
+
+          updateMemGauge(mem.host_pct);
+          document.getElementById("mem-mb-label").textContent =
+            `${mem.host_used_mb} / ${mem.host_total_mb} MB`;
+          document.getElementById("mem-proc-mb").textContent = mem.proc_rss_mb;
+          document.getElementById("mem-host-total").textContent =
+            mem.host_total_mb;
+
+          // Private IP
+          const ip = json.private_ip || "unavailable";
+          document.getElementById("private-ip").textContent = ip;
+
+          // Sync spike button state
+          if (json.spike_active !== spikeActive) {
+            spikeActive = json.spike_active;
+            updateSpikeBtn();
+          }
+
+          if (!silent) {
+            log(
+              "SYS",
+              `sysinfo → mem ${mem.host_pct}% (${mem.host_used_mb}/${mem.host_total_mb} MB) · proc ${mem.proc_rss_mb} MB · ip ${ip}`,
+              "info",
+            );
+          }
+        } catch (e) {
+          if (!silent)
+            log("SYS", `sysinfo fetch failed: ${e.message}`, "error");
+        }
+      }
+
+      function updateSpikeBtn() {
+        const btn = document.getElementById("btn-spike");
+        const lbl = document.getElementById("spike-label");
+        const sig = document.getElementById("spike-sigil");
+        if (spikeActive) {
+          btn.classList.add("spike-active");
+          lbl.textContent = "RELEASE MEM";
+          sig.textContent = "✖";
+        } else {
+          btn.classList.remove("spike-active");
+          lbl.textContent = "SPIKE MEM";
+          sig.textContent = "⚡";
+        }
+      }
+
+      // Poll every 5 s silently
+      setInterval(() => fetchSysinfo(true), 5000);
+
+      // ── Shared utils ────────────────────────────────────────────────────────
+      let entryCount = 0;
+      const ts = () => new Date().toTimeString().slice(0, 8);
+
+      function setLed(state) {
+        const el = document.getElementById("sys-led");
+        const lbl = document.getElementById("sys-status");
+        el.className = "led " + state;
+        lbl.textContent =
+          { idle: "IDLE", busy: "ACTIVE", err: "ERROR" }[state] || "ONLINE";
+      }
+
+      function updateCounter(val) {
+        const el = document.getElementById("click-count");
+        el.textContent = val ?? "—";
+        el.classList.add("bump");
+        setTimeout(() => el.classList.remove("bump"), 180);
+        document.getElementById("last-updated").textContent = `SYNC @ ${ts()}`;
+      }
+
+      function setLoading(id, on) {
+        const btn = document.getElementById(id);
+        btn.classList.toggle("loading", on);
+        btn.disabled = on;
+      }
+
+      function log(verb, msg, level = "info") {
+        const body = document.getElementById("log-body");
+        const ph = document.getElementById("log-placeholder");
+        if (ph) ph.remove();
+        entryCount++;
+        document.getElementById("log-entry-count").textContent =
+          entryCount + " ENTRIES";
+        document.getElementById("log-footer-ts").textContent = "LAST @ " + ts();
+
+        const highlighted = msg
+          .replace(
+            /HTTP (\d+)/g,
+            (_, c) =>
+              `HTTP <span class="hi-${c[0] === "2" ? "ok" : "err"}">${c}</span>`,
+          )
+          .replace(
+            /\b(null|undefined|error|ERR)\b/gi,
+            '<span class="hi-err">$1</span>',
+          )
+          .replace(/\b(\d{3,})\b/g, '<span class="hi-num">$1</span>')
+          .replace(/(→|←|✖|…)/g, '<span class="hi-dim">$1</span>');
+
+        const el = document.createElement("div");
+        el.className = `log-entry ${level}`;
+        el.innerHTML = `<span class="log-ts">${ts()}</span><span class="log-verb ${verb}">${verb}</span><span class="log-msg">${highlighted}</span>`;
+        body.prepend(el);
+      }
+
+      function clearLog() {
+        entryCount = 0;
+        document.getElementById("log-entry-count").textContent = "0 ENTRIES";
+        document.getElementById("log-footer-ts").textContent = "—";
+        document.getElementById("log-body").innerHTML =
+          `<div class="log-empty" id="log-placeholder">&#x25A1;&nbsp;&nbsp;LOG CLEARED</div>`;
+      }
+
+      function toast(msg, type = "info") {
+        const wrap = document.getElementById("toast-wrap");
+        const icons = { success: "✔", error: "✖", info: "▶", warning: "⚡" };
+        const el = document.createElement("div");
+        el.className = `toast-item ${type}`;
+        el.innerHTML = `<span class="toast-icon">${icons[type] || "▶"}</span>${msg}`;
+        wrap.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      // ── API actions ─────────────────────────────────────────────────────────
+      async function doAdd() {
+        const rid = Date.now().toString(36).toUpperCase();
+        log("PUT", `→ /add [${rid}] … dispatched`, "pending");
+        setLoading("btn-add", true);
+        setLed("busy");
+        try {
+          const res = await fetch("/api/add", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+          const json = await res.json();
+          log(
+            "PUT",
+            `← /add [${rid}] HTTP ${json.status}  ${JSON.stringify(json.data)}`,
+            "success",
+          );
+          toast("+ Click registered", "success");
+          if (json.data?.clicks !== undefined) updateCounter(json.data.clicks);
+          else doGet();
+        } catch (e) {
+          log("PUT", `✖ /add [${rid}] ${e.message}`, "error");
+          toast("Request failed", "error");
+          setLed("err");
+          return;
+        } finally {
+          setLoading("btn-add", false);
+        }
+        setLed("");
+      }
+
+      async function doDel() {
+        const rid = Date.now().toString(36).toUpperCase();
+        log("PUT", `→ /del [${rid}] … dispatched`, "pending");
+        setLoading("btn-del", true);
+        setLed("busy");
+        try {
+          const res = await fetch("/api/del", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+          const json = await res.json();
+          log(
+            "PUT",
+            `← /del [${rid}] HTTP ${json.status}  ${JSON.stringify(json.data)}`,
+            "success",
+          );
+          toast("− Click removed", "info");
+          if (json.data?.clicks !== undefined) updateCounter(json.data.clicks);
+          else doGet();
+        } catch (e) {
+          log("PUT", `✖ /del [${rid}] ${e.message}`, "error");
+          toast("Request failed", "error");
+          setLed("err");
+          return;
+        } finally {
+          setLoading("btn-del", false);
+        }
+        setLed("");
+      }
+
+      async function doGet() {
+        const rid = Date.now().toString(36).toUpperCase();
+        log("GET", `→ /get [${rid}] … dispatched`, "pending");
+        setLoading("btn-get", true);
+        setLed("busy");
+        try {
+          const res = await fetch("/api/get");
+          const json = await res.json();
+          log(
+            "GET",
+            `← /get [${rid}] HTTP ${json.status}  ${JSON.stringify(json.data)}`,
+            "success",
+          );
+          const count =
+            json.data?.clicks ?? json.data?.count ?? json.data?.total ?? null;
+          updateCounter(count);
+          toast(`Count: ${count ?? "see log"}`, "success");
+        } catch (e) {
+          log("GET", `✖ /get [${rid}] ${e.message}`, "error");
+          toast("Fetch failed", "error");
+          setLed("err");
+          return;
+        } finally {
+          setLoading("btn-get", false);
+        }
+        setLed("");
+      }
+
+      async function doSpike() {
+        const rid = Date.now().toString(36).toUpperCase();
+        const action = spikeActive ? "RELEASE" : "SPIKE +30%";
+        log("POST", `→ /mem/spike [${rid}] ${action} … dispatched`, "pending");
+        setLoading("btn-spike", true);
+        setLed("busy");
+        try {
+          const res = await fetch("/api/mem/spike", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+          const json = await res.json();
+          spikeActive = json.spike;
+          updateSpikeBtn();
+          const allocMsg = json.allocated_mb
+            ? ` alloc ${json.allocated_mb} MB`
+            : "";
+          log(
+            "POST",
+            `← /mem/spike [${rid}] spike=${json.spike}${allocMsg}  mem=${json.mem?.host_pct}%`,
+            "success",
+          );
+          if (json.spike) {
+            toast(
+              `⚡ Spike active — ${json.allocated_mb} MB allocated`,
+              "warning",
+            );
+          } else {
+            toast("Spike released", "info");
+          }
+          if (json.mem) {
+            updateMemGauge(json.mem.host_pct);
+            document.getElementById("mem-mb-label").textContent =
+              `${json.mem.host_used_mb} / ${json.mem.host_total_mb} MB`;
+            document.getElementById("mem-proc-mb").textContent =
+              json.mem.proc_rss_mb;
+            document.getElementById("mem-host-total").textContent =
+              json.mem.host_total_mb;
+          }
+        } catch (e) {
+          log("POST", `✖ /mem/spike [${rid}] ${e.message}`, "error");
+          toast("Spike failed", "error");
+          setLed("err");
+          return;
+        } finally {
+          setLoading("btn-spike", false);
+        }
+        setLed("");
+      }
+
+      // ── Boot ────────────────────────────────────────────────────────────────
+      window.addEventListener("DOMContentLoaded", () => {
+        doGet();
+        fetchSysinfo(); // initial sysinfo fetch (logged)
+      });
+    </script>
+  </body>
+</html>

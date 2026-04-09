@@ -1,0 +1,14 @@
+# Local machine =============================
+
+# Step 1: Generate SSH key
+ssh-keygen -t ed25519 -C "your_email@gmail.com"
+
+# Step 2: Add key to GitHub
+cat ~/.ssh/id_ed25519.pub
+
+# Step 3: Change remote to SSH
+git remote set-url origin git@you-ssh-url-from-github
+
+#Step 4: Push
+git push -u origin main
+
