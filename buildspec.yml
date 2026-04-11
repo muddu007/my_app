@@ -5,11 +5,11 @@ env:
     AWS_DEFAULT_REGION: "ap-south-1"
     IMAGE_REPO_NAME: "dev"
     IMAGE_TAG: "latest"
-  parameter-store:
-    # Use secret manager for AWS_DEFAULT_REGION and IMAGE_REPO_NAME
-    # Optional: pull secrets from SSM Parameter Store
-    # API_KEY: "/your-app/api-key"
-    # API_GATEWAY_URL: "/your-app/api-gateway-url"
+  #parameter-store:
+  # Use secret manager for AWS_DEFAULT_REGION and IMAGE_REPO_NAME
+  # Optional: pull secrets from SSM Parameter Store
+  # API_KEY: "/your-app/api-key"
+  # API_GATEWAY_URL: "/your-app/api-gateway-url"
 
 phases:
   pre_build:
