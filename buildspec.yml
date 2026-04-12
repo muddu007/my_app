@@ -21,12 +21,6 @@ phases:
       - ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
       - IMAGE_URI="$ECR_REGISTRY/$IMAGE_REPO_NAME:$IMAGE_TAG"
       - IMAGE_URI_COMMIT="$ECR_REGISTRY/$IMAGE_REPO_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION"
-      - echo "Scaling up ECS service for deployment..."
-      - echo "Cluster = $ECS_CLUSTER_NAME"
-      - echo "Service = $ECS_SERVICE_NAME"
-      - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --desired-count 1 2>&1
-      - aws ecs wait services-stable --cluster $ECS_CLUSTER_NAME --services $ECS_SERVICE_NAME
-      - echo "Service is stable, proceeding with build..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
       - echo "Pre-build phase complete."
 
@@ -43,6 +37,12 @@ phases:
       - echo "Pushing Docker image to ECR..."
       - docker push $IMAGE_URI
       - docker push $IMAGE_URI_COMMIT
+      - echo "Scaling up ECS service for deployment..."
+      - echo "Cluster = $ECS_CLUSTER_NAME"
+      - echo "Service = $ECS_SERVICE_NAME"
+      - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --desired-count 1 2>&1
+      - aws ecs wait services-stable --cluster $ECS_CLUSTER_NAME --services $ECS_SERVICE_NAME
+      - echo "Service is stable, proceeding with build..."
       - echo "Writing image definitions file for ECS/CodeDeploy..."
       - printf '[{"name":"%s","imageUri":"%s"}]' "$IMAGE_REPO_NAME" "$IMAGE_URI" > imagedefinitions.json
       - cat imagedefinitions.json
