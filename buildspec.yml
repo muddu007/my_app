@@ -2,12 +2,12 @@ version: 0.2
 
 env:
   variables:
-    AWS_DEFAULT_REGION: "ap-south-1"
-    IMAGE_REPO_NAME: "dev"
     IMAGE_TAG: "latest"
-    ECS_CLUSTER_NAME: "dev_cluster"
   parameter-store:
     ECS_SERVICE_NAME: "ecs_service_name"
+    ECS_CLUSTER_NAME: "ecs_cluster_name"
+    AWS_DEFAULT_REGION: "default_region"
+    IMAGE_REPO_NAME: "image_repo"
 
   # Use secret manager for AWS_DEFAULT_REGION and IMAGE_REPO_NAME
   # Optional: pull secrets from SSM Parameter Store
