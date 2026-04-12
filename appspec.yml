@@ -1,0 +1,30 @@
+version: 0.0
+os: linux
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: <TASK_DEFINITION>
+        LoadBalancerInfo:
+          ContainerName: "dev" # Must match IMAGE_REPO_NAME in buildspec.yml
+          ContainerPort: 5000 # Change to your container's actual port
+        PlatformVersion: "LATEST"
+
+Hooks:
+  # Runs BEFORE traffic is shifted to the new task set
+  - BeforeInstall:
+      - location: scripts/before_install.sh
+        timeout: 300
+        runas: root
+
+  # Runs AFTER new task set is installed but BEFORE traffic shift
+  - AfterInstall:
+      - location: scripts/after_install.sh
+        timeout: 300
+        runas: root
+
+  # Runs AFTER test listener receives traffic — ideal for integration tests
+  - AfterAllowTestTraffic:
+      - location: scripts/run_tests.sh
+        timeout: 600
+        runas: root
