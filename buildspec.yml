@@ -5,9 +5,10 @@ env:
     AWS_DEFAULT_REGION: "ap-south-1"
     IMAGE_REPO_NAME: "dev"
     IMAGE_TAG: "latest"
-    ECS_SERVICE_NAME: "dev_3-service-3s433myn"
     ECS_CLUSTER_NAME: "dev_cluster"
-  #parameter-store:
+  parameter-store:
+    ECS_SERVICE_NAME: "ecs_service_name"
+
   # Use secret manager for AWS_DEFAULT_REGION and IMAGE_REPO_NAME
   # Optional: pull secrets from SSM Parameter Store
   # API_KEY: "/your-app/api-key"
