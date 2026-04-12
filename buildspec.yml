@@ -50,6 +50,8 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
+    - appspec.yml
+    - scripts/**/*
 
 cache:
   paths:
