@@ -1,12 +1,12 @@
 version: 0.2
 
-# One container should be running in order this to work
-
 env:
   variables:
     AWS_DEFAULT_REGION: "ap-south-1"
     IMAGE_REPO_NAME: "dev"
     IMAGE_TAG: "latest"
+    ECS_SERVICE_NAME: "dev_defination-service-q0ljj95b"
+    ECS_CLUSTER_NAME: "dev_cluster"
   #parameter-store:
   # Use secret manager for AWS_DEFAULT_REGION and IMAGE_REPO_NAME
   # Optional: pull secrets from SSM Parameter Store
@@ -21,6 +21,12 @@ phases:
       - ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
       - IMAGE_URI="$ECR_REGISTRY/$IMAGE_REPO_NAME:$IMAGE_TAG"
       - IMAGE_URI_COMMIT="$ECR_REGISTRY/$IMAGE_REPO_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - echo "Scaling up ECS service for deployment..."
+      - echo "Cluster = $ECS_CLUSTER_NAME"
+      - echo "Service = $ECS_SERVICE_NAME"
+      - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --desired-count 1 2>&1
+      - aws ecs wait services-stable --cluster $ECS_CLUSTER_NAME --services $ECS_SERVICE_NAME
+      - echo "Service is stable, proceeding with build..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
       - echo "Pre-build phase complete."
 
