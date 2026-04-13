@@ -187,30 +187,26 @@ pipeline {
                 script {
                 def shortCommit = env.GIT_COMMIT[0..6]
                 def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
-                def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
                 def message = """
-Deployment Approval Required
 ==============================
 Branch  : ${branch}
 Commit  : ${shortCommit}
 Build # : ${env.BUILD_NUMBER}
 Image   : ${env.IMAGE_URI_COMMIT}
 
-Click the link below to Review, Approve or Deny the merge:
-${reviewUrl}
+Production Server Updated Successfully
 
-Note: Link will open a confirmation page before any action is taken.
                 """.trim()
 
                 // Publish to SNS
                 sh """
                     aws sns publish \
                         --topic-arn "${env.SNS_TOPIC_ARN}" \
-                        --subject "Approval Required: Merge '${branch}' to main [Build #${env.BUILD_NUMBER}]" \
+                        --subject "Production update successfull" \
                         --message '${message}'
                 """
 
-                echo 'Approval notification sent to manager via SNS.'
+                echo 'Production upgrade notification sent to manager via SNS.'
                 }
             }
             failure {
@@ -218,7 +214,7 @@ Note: Link will open a confirmation page before any action is taken.
                 sh """
                 aws sns publish \
                     --topic-arn "${env.SNS_TOPIC_ARN}" \
-                    --subject "❌ Deployment FAILED: ${env.ECS_SERVICE_NAME}" \
+                    --subject "❌ Production Deploy FAILED: ${env.ECS_SERVICE_NAME}" \
                     --message "Pipeline FAILED — please investigate.
                     Service   : ${env.ECS_SERVICE_NAME}
                     Cluster   : ${env.ECS_CLUSTER_NAME}
