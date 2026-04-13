@@ -17,8 +17,7 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        echo $ECS_SERVICE_NAME
-
+                        echo "ECS Service Name: ${env.ECS_SERVICE_NAME}"
                         env.ECS_CLUSTER_NAME = sh(
                             script: "aws ssm get-parameter --name 'ecs_cluster_name' --query 'Parameter.Value' --output text",
                             returnStdout: true
