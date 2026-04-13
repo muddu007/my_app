@@ -17,6 +17,11 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
+                        env.API_GATEWAY_URL = sh(
+                            script: "aws ssm get-parameter --name 'api_gateway_url' --query 'Parameter.Value' --output text",
+                            returnStdout: true
+                        ).trim()
+
                         env.SNS_TOPIC_ARN = sh(
                             script: "aws ssm get-parameter --name 'sns_topic_arn' --query 'Parameter.Value' --output text",
                             returnStdout: true
@@ -182,25 +187,20 @@ pipeline {
                 script {
                 def shortCommit = env.GIT_COMMIT[0..6]
                 def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
-
-                // Your API Gateway URLs (backed by Lambda)
-                def approveUrl = "https://your-api-gateway-url/prod/merge?action=approve&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
-                def denyUrl    = "https://your-api-gateway-url/prod/merge?action=deny&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
-
+                def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
                 def message = """
-                    Deployment Approval Required
+Deployment Approval Required
+==============================
+Branch  : ${branch}
+Commit  : ${shortCommit}
+Build # : ${env.BUILD_NUMBER}
+Image   : ${env.IMAGE_URI_COMMIT}
 
-                    Branch  : ${branch}
-                    Commit  : ${shortCommit}
-                    Build # : ${env.BUILD_NUMBER}
-                    Image   : ${env.IMAGE_URI_COMMIT}
+Click the link below to Review, Approve or Deny the merge:
+${reviewUrl}
 
-                    APPROVE merge to main:
-                    ${approveUrl}
-
-                    DENY merge:
-                    ${denyUrl}
-                """
+Note: Link will open a confirmation page before any action is taken.
+                """.trim()
 
                 // Publish to SNS
                 sh """
