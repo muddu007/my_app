@@ -33,14 +33,14 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                    // For SecureString parameters, add --with-decryption flag
-                    // env.API_KEY = sh(
-                    //     script: "aws ssm get-parameter --name '/your-app/api-key' --with-decryption --query 'Parameter.Value' --output text",
-                    //     returnStdout: true
-                    // ).trim()
+                        env.ECS_TASK_FAMILY = sh(
+                            script: "aws ssm get-parameter --name 'ecs_task_family' --query 'Parameter.Value' --output text",
+                            returnStdout: true
+                        ).trim()
                     }
                     }
             }
+        }
 
         // ─── PRE_BUILD ────────────────────────────────────────────────
         stage('Pre-Build') {
@@ -141,6 +141,5 @@ pipeline {
                 echo 'Pipeline failed. Check logs above.'
             // Add email/Slack notification here
             }
-        }
         }
     }
