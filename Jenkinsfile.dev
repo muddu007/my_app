@@ -13,7 +13,7 @@ pipeline {
                     script {
                         // Fetch each parameter from AWS SSM Parameter Store
                         env.ECS_SERVICE_NAME = sh(
-                            script: "aws ssm get-parameter --name 'ecs_service_name_prod' --query 'Parameter.Value' --output text",
+                            script: "aws ssm get-parameter --name 'ecs_service_name' --query 'Parameter.Value' --output text",
                             returnStdout: true
                         ).trim()
 
@@ -28,7 +28,7 @@ pipeline {
                         ).trim()
 
                         env.ECS_CLUSTER_NAME = sh(
-                            script: "aws ssm get-parameter --name 'ecs_cluster_name_prod' --query 'Parameter.Value' --output text",
+                            script: "aws ssm get-parameter --name 'ecs_cluster_name' --query 'Parameter.Value' --output text",
                             returnStdout: true
                         ).trim()
 
@@ -38,12 +38,12 @@ pipeline {
                         ).trim()
 
                         env.IMAGE_REPO_NAME = sh(
-                            script: "aws ssm get-parameter --name 'image_repo_prod' --query 'Parameter.Value' --output text",
+                            script: "aws ssm get-parameter --name 'image_repo' --query 'Parameter.Value' --output text",
                             returnStdout: true
                         ).trim()
 
                         env.ECS_TASK_FAMILY = sh(
-                            script: "aws ssm get-parameter --name 'ecs_task_family_prod' --query 'Parameter.Value' --output text",
+                            script: "aws ssm get-parameter --name 'ecs_task_family' --query 'Parameter.Value' --output text",
                             returnStdout: true
                         ).trim()
                     }
