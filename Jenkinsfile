@@ -17,6 +17,8 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
+                        echo $ECS_SERVICE_NAME
+
                         env.ECS_CLUSTER_NAME = sh(
                             script: "aws ssm get-parameter --name 'ecs_cluster_name' --query 'Parameter.Value' --output text",
                             returnStdout: true
@@ -44,10 +46,8 @@ pipeline {
         // ─── PRE_BUILD ────────────────────────────────────────────────
         stage('Pre-Build') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: "${env.AWS_DEFAULT_REGION}") {
                     script {
                         echo 'Logging in to Amazon ECR...'
-
                         env.AWS_ACCOUNT_ID = sh(
                             script: 'aws sts get-caller-identity --query Account --output text',
                             returnStdout: true
@@ -64,7 +64,6 @@ pipeline {
 
                         echo 'Pre-build phase complete.'
                     }
-                }
             }
         }
 
@@ -86,7 +85,6 @@ pipeline {
         // ─── POST_BUILD / DEPLOY ──────────────────────────────────────
         stage('Push & Deploy') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: "${env.AWS_DEFAULT_REGION}") {
                     script {
                         echo 'Pushing Docker image to ECR...'
                         sh """
@@ -116,7 +114,6 @@ pipeline {
                         // Archive as Jenkins artifact (equivalent to CodeBuild artifacts)
                         archiveArtifacts artifacts: 'imagedefinitions.json', fingerprint: true
                     }
-                }
             }
         }
         }
