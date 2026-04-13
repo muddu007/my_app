@@ -17,7 +17,11 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        echo "ECS Service Name: ${env.ECS_SERVICE_NAME}"
+                        env.SNS_TOPIC_ARN = sh(
+                            script: "aws ssm get-parameter --name 'sns_topic_arn' --query 'Parameter.Value' --output text",
+                            returnStdout: true
+                        ).trim()
+
                         env.ECS_CLUSTER_NAME = sh(
                             script: "aws ssm get-parameter --name 'ecs_cluster_name' --query 'Parameter.Value' --output text",
                             returnStdout: true
@@ -175,11 +179,36 @@ pipeline {
             """
             }
             success {
-                echo 'Pipeline completed successfully!'
+                script {
+                sh """
+                            aws sns publish \
+                                --topic-arn "${env.SNS_TOPIC_ARN}" \
+                                --subject "✅ Deployment SUCCESS: ${env.ECS_SERVICE_NAME}" \
+                                --message "Pipeline completed successfully.
+                                        Service   : ${env.ECS_SERVICE_NAME}
+                                        Cluster   : ${env.ECS_CLUSTER_NAME}
+                                        Image     : ${env.IMAGE_URI_COMMIT}
+                                        Branch    : ${env.GIT_BRANCH}
+                                        Build No  : ${env.BUILD_NUMBER}
+                                        Build URL : ${env.BUILD_URL}
+                                        Time      : \$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+                        """
+                }
             }
             failure {
-                echo 'Pipeline failed. Check logs above.'
-            // Add email/Slack notification here
+            script {
+                sh """
+                aws sns publish \
+                    --topic-arn "${env.SNS_TOPIC_ARN}" \
+                    --subject "❌ Deployment FAILED: ${env.ECS_SERVICE_NAME}" \
+                    --message "Pipeline FAILED — please investigate.
+                        Service   : ${env.ECS_SERVICE_NAME}
+                        Cluster   : ${env.ECS_CLUSTER_NAME}
+                        Branch    : ${env.GIT_BRANCH}
+                        Build No  : ${env.BUILD_NUMBER}
+                        Build URL : ${env.BUILD_URL}
+                        Time      : \$(date -u '+%Y-%m-%d %H:%M:%S UTC')"                                    """
+            }
             }
         }
     }
