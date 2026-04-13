@@ -38,9 +38,8 @@ pipeline {
                     //     returnStdout: true
                     // ).trim()
                     }
-                 }
+                    }
             }
-        }
 
         // ─── PRE_BUILD ────────────────────────────────────────────────
         stage('Pre-Build') {
@@ -120,7 +119,7 @@ pipeline {
                 }
             }
         }
-    }
+        }
 
     // ─── POST (cleanup & notifications) ──────────────────────────────
     post {
@@ -138,4 +137,4 @@ pipeline {
         // Add email/Slack notification here
         }
     }
-
+    }
