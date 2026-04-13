@@ -180,19 +180,37 @@ pipeline {
             }
             success {
                 script {
+                def shortCommit = env.GIT_COMMIT[0..6]
+                def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
+
+                // Your API Gateway URLs (backed by Lambda)
+                def approveUrl = "https://your-api-gateway-url/prod/merge?action=approve&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
+                def denyUrl    = "https://your-api-gateway-url/prod/merge?action=deny&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
+
+                def message = """
+                    Deployment Approval Required
+
+                    Branch  : ${branch}
+                    Commit  : ${shortCommit}
+                    Build # : ${env.BUILD_NUMBER}
+                    Image   : ${env.IMAGE_URI_COMMIT}
+
+                    APPROVE merge to main:
+                    ${approveUrl}
+
+                    DENY merge:
+                    ${denyUrl}
+                """
+
+                // Publish to SNS
                 sh """
-                            aws sns publish \
-                                --topic-arn "${env.SNS_TOPIC_ARN}" \
-                                --subject "✅ Deployment SUCCESS: ${env.ECS_SERVICE_NAME}" \
-                                --message "Pipeline completed successfully.
-                                        Service   : ${env.ECS_SERVICE_NAME}
-                                        Cluster   : ${env.ECS_CLUSTER_NAME}
-                                        Image     : ${env.IMAGE_URI_COMMIT}
-                                        Branch    : ${env.GIT_BRANCH}
-                                        Build No  : ${env.BUILD_NUMBER}
-                                        Build URL : ${env.BUILD_URL}
-                                        Time      : \$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-                        """
+                    aws sns publish \
+                        --topic-arn "${env.SNS_TOPIC_ARN}" \
+                        --subject "Approval Required: Merge '${branch}' to main [Build #${env.BUILD_NUMBER}]" \
+                        --message '${message}'
+                """
+
+                echo 'Approval notification sent to manager via SNS.'
                 }
             }
             failure {
@@ -202,12 +220,12 @@ pipeline {
                     --topic-arn "${env.SNS_TOPIC_ARN}" \
                     --subject "❌ Deployment FAILED: ${env.ECS_SERVICE_NAME}" \
                     --message "Pipeline FAILED — please investigate.
-                        Service   : ${env.ECS_SERVICE_NAME}
-                        Cluster   : ${env.ECS_CLUSTER_NAME}
-                        Branch    : ${env.GIT_BRANCH}
-                        Build No  : ${env.BUILD_NUMBER}
-                        Build URL : ${env.BUILD_URL}
-                        Time      : \$(date -u '+%Y-%m-%d %H:%M:%S UTC')"                                    """
+                    Service   : ${env.ECS_SERVICE_NAME}
+                    Cluster   : ${env.ECS_CLUSTER_NAME}
+                    Branch    : ${env.GIT_BRANCH}
+                    Build No  : ${env.BUILD_NUMBER}
+                    Build URL : ${env.BUILD_URL}
+                    Time      : \$(date -u '+%Y-%m-%d %H:%M:%S UTC')"                                    """
             }
             }
         }
