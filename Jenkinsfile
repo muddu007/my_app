@@ -80,6 +80,46 @@ pipeline {
             }
         }
 
+        // ─── SMOKE TEST ───────────────────────────────────────────────
+        stage('Test') {
+            steps {
+                script {
+                    echo 'Starting container for smoke test...'
+                    sh """
+                        # Run container in background
+                        docker run -d \
+                            --name smoke_test_container \
+                            -p 5000:5000 \
+                            ${env.IMAGE_URI}
+
+                        echo 'Waiting for Python app to be ready...'
+
+                        # Retry curl up to 10 times, 5 seconds apart
+                        for i in \$(seq 1 10); do
+                            echo "Attempt \$i: checking http://localhost:5000 ..."
+                            if curl --fail --silent http://localhost:5000; then
+                                echo 'Smoke test passed!'
+                                exit 0
+                            fi
+                            sleep 5
+                        done
+
+                        echo 'Smoke test FAILED - app did not respond in time'
+                        exit 1
+                    """
+                }
+            }
+            post {
+                always {
+                    // Always clean up container regardless of pass/fail
+                    sh '''
+                        docker stop smoke_test_container || true
+                        docker rm  smoke_test_container || true
+                    '''
+                }
+            }
+        }
+
         stage('Push & Deploy') {
             steps {
                 script {
