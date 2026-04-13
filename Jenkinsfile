@@ -126,20 +126,21 @@ pipeline {
             }
         }
 
-    // ─── POST (cleanup & notifications) ──────────────────────────────
-    post {
-        always {
-            sh """
+        // ─── POST (cleanup & notifications) ──────────────────────────────
+        post {
+            always {
+                sh """
                 docker rmi ${env.IMAGE_URI} || true
                 docker rmi ${env.IMAGE_URI_COMMIT} || true
             """
+            }
+            success {
+                echo 'Pipeline completed successfully!'
+            }
+            failure {
+                echo 'Pipeline failed. Check logs above.'
+            // Add email/Slack notification here
+            }
         }
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Check logs above.'
-        // Add email/Slack notification here
         }
     }
-        }
