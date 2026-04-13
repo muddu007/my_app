@@ -81,40 +81,49 @@ pipeline {
             }
         }
 
-        // ─── POST_BUILD / DEPLOY ──────────────────────────────────────
         stage('Push & Deploy') {
             steps {
-                    script {
-                        echo 'Pushing Docker image to ECR...'
-                        sh """
-                            docker push ${env.IMAGE_URI}
-                            docker push ${env.IMAGE_URI_COMMIT}
-                        """
+                script {
+                    echo 'Pushing Docker image to ECR...'
+                    sh """
+                docker push ${env.IMAGE_URI}
+                docker push ${env.IMAGE_URI_COMMIT}
+            """
 
-                        echo 'Scaling up ECS service...'
-                        sh """
-                            aws ecs update-service \
-                                --cluster ${env.ECS_CLUSTER_NAME} \
-                                --service ${env.ECS_SERVICE_NAME} \
-                                --desired-count 1
+                    echo 'Registering new ECS Task Definition revision...'
+                    sh """
+                # Fetch current task definition (strip unneeded fields)
+                TASK_DEF=\$(aws ecs describe-task-definition \
+                    --task-definition ${env.ECS_TASK_FAMILY} \
+                    --query 'taskDefinition' \
+                    --output json | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
 
-                            aws ecs wait services-stable \
-                                --cluster ${env.ECS_CLUSTER_NAME} \
-                                --services ${env.ECS_SERVICE_NAME}
-                        """
+                # Swap the image URI to the new commit-tagged image
+                NEW_TASK_DEF=\$(echo \$TASK_DEF | jq \
+                    --arg IMAGE "${env.IMAGE_URI_COMMIT}" \
+                    '.containerDefinitions[0].image = \$IMAGE')
 
-                        echo 'Writing imagedefinitions.json...'
-                        sh """
-                            printf '[{"name":"%s","imageUri":"%s"}]' \
-                                "${env.IMAGE_REPO_NAME}" "${env.IMAGE_URI}" > imagedefinitions.json
-                            cat imagedefinitions.json
-                        """
+                # Register the new revision and capture its ARN
+                NEW_TASK_DEF_ARN=\$(aws ecs register-task-definition \
+                    --cli-input-json "\$NEW_TASK_DEF" \
+                    --query 'taskDefinition.taskDefinitionArn' \
+                    --output text)
 
-                        // Archive as Jenkins artifact (equivalent to CodeBuild artifacts)
-                        archiveArtifacts artifacts: 'imagedefinitions.json', fingerprint: true
-                    }
+                echo "New Task Definition: \$NEW_TASK_DEF_ARN"
+
+                # Update the service to use the new revision
+                aws ecs update-service \
+                    --cluster ${env.ECS_CLUSTER_NAME} \
+                    --service ${env.ECS_SERVICE_NAME} \
+                    --task-definition \$NEW_TASK_DEF_ARN \
+                    --desired-count 1
+
+                aws ecs wait services-stable \
+                    --cluster ${env.ECS_CLUSTER_NAME} \
+                    --services ${env.ECS_SERVICE_NAME}
+            """
+                }
             }
-        }
         }
 
     // ─── POST (cleanup & notifications) ──────────────────────────────
@@ -133,4 +142,4 @@ pipeline {
         // Add email/Slack notification here
         }
     }
-    }
+        }
