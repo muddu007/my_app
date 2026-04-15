@@ -22,11 +22,6 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        env.API_KEY = sh(
-                            script: "aws ssm get-parameter --name 'api_key' --query 'Parameter.Value' --output text",
-                            returnStdout: true
-                        ).trim()
-
                         env.SNS_TOPIC_ARN = sh(
                             script: "aws ssm get-parameter --name 'sns_topic_arn' --query 'Parameter.Value' --output text",
                             returnStdout: true
