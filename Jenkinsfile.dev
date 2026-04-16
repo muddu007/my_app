@@ -1,3 +1,27 @@
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+import java.util.Base64
+
+def generateJWT(String secret, String branch, String commit, String build) {
+    // Header
+    def header  = Base64.urlEncoder.withoutPadding()
+                    .encodeToString('{"alg":"HS256","typ":"JWT"}'.bytes)
+
+    // Payload — expiry 24 hours from now
+    def exp     = (System.currentTimeMillis() / 1000 + 86400).toLong()
+    def payload = Base64.urlEncoder.withoutPadding()
+                    .encodeToString("""{"branch":"${branch}","commit":"${commit}","build":"${build}","exp":${exp}}""".bytes)
+
+    // Signature
+    def data    = "${header}.${payload}"
+    def mac     = Mac.getInstance('HmacSHA256')
+    mac.init(new SecretKeySpec(secret.bytes, 'HmacSHA256'))
+    def sig     = Base64.urlEncoder.withoutPadding()
+                    .encodeToString(mac.doFinal(data.bytes))
+
+    return "${header}.${payload}.${sig}"
+}
+
 pipeline {
     agent any
     environment {
@@ -12,6 +36,12 @@ pipeline {
                     // withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'afreen_user_aws_id', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     script {
                         // Fetch each parameter from AWS SSM Parameter Store
+
+                        env.APPROVAL_SECRET = sh(
+                            script: "aws ssm get-parameter --name 'approval_secret' --query 'Parameter.Value' --output text",
+                            returnStdout: true
+                        ).trim()
+
                         env.ECS_SERVICE_NAME = sh(
                             script: "aws ssm get-parameter --name 'ecs_service_name' --query 'Parameter.Value' --output text",
                             returnStdout: true
@@ -187,7 +217,8 @@ pipeline {
                 script {
                 def shortCommit = env.GIT_COMMIT[0..6]
                 def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
-                def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}"
+                def token     = generateJWT(APPROVAL_SECRET, branch, env.GIT_COMMIT, env.BUILD_NUMBER)
+                def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}&token=${token}"
                 def message = """
 Deployment Approval Required
 ==============================
