@@ -217,7 +217,7 @@ pipeline {
                 script {
                 def shortCommit = env.GIT_COMMIT[0..6]
                 def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
-                def token     = generateJWT(APPROVAL_SECRET, branch, env.GIT_COMMIT, env.BUILD_NUMBER)
+                def token     = generateJWT(env.APPROVAL_SECRET, branch, env.GIT_COMMIT, env.BUILD_NUMBER)
                 def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}&token=${token}"
                 def message = """
 Deployment Approval Required
