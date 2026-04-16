@@ -190,21 +190,23 @@ pipeline {
             """
             }
             success {
-                script {
+            script {
                 def shortCommit = env.GIT_COMMIT[0..6]
                 def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
+
                 def token = sh(script: """
-                        python3 -c "
-                                    import jwt, datetime
-                                    payload = {
-                                        'branch': '${branch}',
-                                        'commit': '${env.GIT_COMMIT}',
-                                        'build':  '${env.BUILD_NUMBER}',
-                                        'exp':    datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-                                    }
-                                    print(jwt.encode(payload, '${env.APPROVAL_SECRET}', algorithm='HS256'))
-                                    "
-                                                        """, returnStdout: true).trim()
+python3 - << EOF
+import jwt, datetime
+payload = {
+    'branch': '${branch}',
+    'commit': '${env.GIT_COMMIT}',
+    'build':  '${env.BUILD_NUMBER}',
+    'exp':    datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+}
+print(jwt.encode(payload, '${env.APPROVAL_SECRET}', algorithm='HS256'))
+EOF
+""", returnStdout: true).trim()
+
                 def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}&token=${token}"
                 def message = """
 Deployment Approval Required
@@ -229,7 +231,7 @@ Note: Link will open a confirmation page before any action is taken.
                 """
 
                 echo 'Approval notification sent to manager via SNS.'
-                }
+            }
             }
             failure {
             script {
