@@ -8,7 +8,7 @@ def generateJWT(String secret, String branch, String commit, String build) {
                     .encodeToString('{"alg":"HS256","typ":"JWT"}'.bytes)
 
     // Payload — expiry 24 hours from now
-    def exp     = (System.currentTimeMillis() / 1000 + 86400).toLong()
+    def exp = System.currentTimeMillis().intdiv(1000) + 86400L
     def payload = Base64.urlEncoder.withoutPadding()
                     .encodeToString("""{"branch":"${branch}","commit":"${commit}","build":"${build}","exp":${exp}}""".bytes)
 
