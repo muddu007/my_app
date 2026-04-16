@@ -196,7 +196,7 @@ pipeline {
 
                 def token = sh(script: """
 python3 - << EOF
-import jwt, datetime
+import jwt, datetime, os
 payload = {
     'branch': '${branch}',
     'commit': '${env.GIT_COMMIT}',
