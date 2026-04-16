@@ -1,28 +1,3 @@
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-import java.util.Base64
-
-def generateJWT(String secret, String branch, String commit, String build) {
-    // Header
-    def header  = Base64.urlEncoder.withoutPadding()
-                    .encodeToString('{"alg":"HS256","typ":"JWT"}'.getBytes('UTF-8'))
-
-    // Payload — expiry 24 hours from now
-    def exp     = System.currentTimeMillis().intdiv(1000) + 86400L
-    def payloadJson = """{"branch":"${branch}","commit":"${commit}","build":"${build}","exp":${exp}}""".toString()
-    def payload = Base64.urlEncoder.withoutPadding()
-                    .encodeToString(payloadJson.getBytes('UTF-8'))
-
-    // Signature
-    def data    = "${header}.${payload}".toString()
-    def mac     = Mac.getInstance('HmacSHA256')
-    mac.init(new SecretKeySpec(secret.getBytes('UTF-8'), 'HmacSHA256'))
-    def sig     = Base64.urlEncoder.withoutPadding()
-                    .encodeToString(mac.doFinal(data.getBytes('UTF-8')))
-
-    return "${header}.${payload}.${sig}".toString()
-}
-
 pipeline {
     agent any
     environment {
@@ -218,7 +193,18 @@ pipeline {
                 script {
                 def shortCommit = env.GIT_COMMIT[0..6]
                 def branch      = env.GIT_BRANCH.replaceAll('origin/', '')
-                def token     = generateJWT(env.APPROVAL_SECRET, branch, env.GIT_COMMIT, env.BUILD_NUMBER)
+                def token = sh(script: """
+                        python3 -c "
+                                    import jwt, datetime
+                                    payload = {
+                                        'branch': '${branch}',
+                                        'commit': '${env.GIT_COMMIT}',
+                                        'build':  '${env.BUILD_NUMBER}',
+                                        'exp':    datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+                                    }
+                                    print(jwt.encode(payload, '${env.APPROVAL_SECRET}', algorithm='HS256'))
+                                    "
+                                                        """, returnStdout: true).trim()
                 def reviewUrl = "${env.API_GATEWAY_URL}?action=review&branch=${branch}&commit=${env.GIT_COMMIT}&build=${env.BUILD_NUMBER}&token=${token}"
                 def message = """
 Deployment Approval Required
