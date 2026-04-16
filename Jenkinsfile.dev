@@ -203,7 +203,7 @@ payload = {
     'build':  '${env.BUILD_NUMBER}',
     'exp':    datetime.datetime.utcnow() + datetime.timedelta(hours=24)
 }
-print(jwt.encode(payload, '${env.APPROVAL_SECRET}', algorithm='HS256'))
+print(jwt.encode(payload, os.environ['APPROVAL_SECRET'], algorithm='HS256'))
 EOF
 """, returnStdout: true).trim()
 
